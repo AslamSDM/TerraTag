@@ -19,6 +19,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
   currentW3W,
   refreshInventory,
   setStatus,
+  inventory,
 }) => {
   const [loadingAction, setLoadingAction] = useState<string | null>(null); // 'claim', 'release', 'swap', 'cancelSwap'
   const [releaseTarget, setReleaseTarget] = useState(""); // w3w string to release
@@ -30,6 +31,10 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
   const [theirSquareOwner, setTheirSquareOwner] = useState<string | null>(null);
   const [checkingOwner, setCheckingOwner] = useState(false);
   const [theirSquareUnclaimed, setTheirSquareUnclaimed] = useState(false);
+
+  // Check if the current square is already owned by the user
+  const isCurrentSquareOwned =
+    currentW3W && inventory && inventory.includes(currentW3W);
 
   // Function to fetch pending swaps (this is a simplified implementation)
   const fetchPendingSwaps = async () => {
@@ -227,59 +232,61 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
           )}
         </div>
 
-        <Button
-          onClick={() => handleAction("claim")}
-          disabled={!currentW3W || loadingAction === "claim" || !account}
-          className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-medium h-12"
-        >
-          {loadingAction === "claim" ? (
-            <>
-              <svg
-                className="animate-spin -ml-1 mr-2 h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
+        {!isCurrentSquareOwned && (
+          <Button
+            onClick={() => handleAction("claim")}
+            disabled={!currentW3W || loadingAction === "claim" || !account}
+            className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-medium h-12"
+          >
+            {loadingAction === "claim" ? (
+              <>
+                <svg
+                  className="animate-spin -ml-1 mr-2 h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Claiming...
+              </>
+            ) : (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
                   stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Claiming...
-            </>
-          ) : (
-            <>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="mr-2"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <path d="M3 9h18"></path>
-                <path d="M9 21V9"></path>
-              </svg>
-              {currentW3W
-                ? `Claim /// ${currentW3W}`
-                : "Select a location first"}
-            </>
-          )}
-        </Button>
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-2"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <path d="M3 9h18"></path>
+                  <path d="M9 21V9"></path>
+                </svg>
+                {currentW3W
+                  ? `Claim /// ${currentW3W}`
+                  : "Select a location first"}
+              </>
+            )}
+          </Button>
+        )}
         {!currentW3W ? (
           <p className="text-xs text-white text-center">
             Waiting for current location...

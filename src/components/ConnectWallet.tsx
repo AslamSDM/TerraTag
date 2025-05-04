@@ -1,3 +1,4 @@
+"use client";
 import React, { useCallback, useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { ConnectWalletProps } from "../types";

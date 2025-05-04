@@ -20,6 +20,7 @@ export interface ActionPanelProps {
   currentW3W: string | null;
   refreshInventory: () => void;
   setStatus: (message: string) => void;
+  inventory: string[];
 }
 
 export interface InventoryProps {

@@ -138,6 +138,7 @@ function App() {
                   currentW3W={currentW3W}
                   refreshInventory={refreshInventoryCallback}
                   setStatus={setStatus}
+                  inventory={inventory}
                 />
               </CardContent>
             </Card>

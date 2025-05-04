@@ -233,22 +233,22 @@ export const MAP_CONFIG = {
 // Network settings
 export const NETWORK = {
   REQUIRED: {
-    chainId: 80002, // Polygon Mumbai testnet
-    chainIdHex: "0x13882", // Hex version of chainId
-    name: "Polygon Mumbai Testnet",
+    chainId: 80001, // Polygon Amoy testnet
+    chainIdHex: "0x13881", // Hex version of chainId
+    name: "Polygon Amoy Testnet",
     currency: {
       name: "MATIC",
       symbol: "MATIC",
       decimals: 18,
     },
-    rpcUrls: ["https://rpc-mumbai.maticvigil.com/"],
-    blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
+    rpcUrls: ["https://rpc-amoy.polygon.technology/"],
+    blockExplorerUrls: ["https://amoy.polygonscan.com/"],
   },
   // Add more networks if needed in the future
   SUPPORTED_NETWORKS: {
-    "0x13882": {
-      name: "Polygon Mumbai Testnet",
-      shortName: "Mumbai",
+    "0x13881": {
+      name: "Polygon Amoy Testnet",
+      shortName: "Amoy",
       color: "text-purple-400",
       bgColor: "bg-purple-900/30",
       borderColor: "border-purple-800/30",

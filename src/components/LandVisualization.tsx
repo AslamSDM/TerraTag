@@ -28,8 +28,11 @@ function LandSquare({
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
-  // Calculate height based on distance (closer = taller)
-  const height = MAP_CONFIG.heightScale * (1 / (distance + 0.5));
+  // Calculate height based on distance (closer = taller) and ownership
+  const baseHeight = isOwned
+    ? MAP_CONFIG.heightScale * 1.5
+    : MAP_CONFIG.heightScale;
+  const height = baseHeight * (1 / (distance + 0.5));
 
   // Handle hover animation
   useFrame(() => {
@@ -95,7 +98,7 @@ function LandSquare({
   );
 }
 
-// Grid of land squares with coordinate mapping
+// Generate a grid of adjacent land squares
 function LandGrid({
   landCoordinates,
   currentUserLocation,
@@ -104,6 +107,9 @@ function LandGrid({
 }: LandGridProps) {
   // Generate colors based on the w3w words
   const getColorFromWord = (word: string): string => {
+    // If no word provided, use a default color for empty squares
+    if (!word) return "#444444";
+
     // Simple hash function to convert string to color
     let hash = 0;
     for (let i = 0; i < word.length; i++) {
@@ -133,69 +139,102 @@ function LandGrid({
     );
   }
 
-  // Map coordinates to relative 3D space
-  // The center (0,0,0) is the user's current location
+  // Find the center square based on current W3W if it exists in coordinates
+  let centerSquare = landCoordinates.find(
+    (coord) => coord.w3wAddress === currentW3W
+  );
+
+  // If currentW3W is not in our coordinates, use the first coordinate as center
+  if (!centerSquare && landCoordinates.length > 0) {
+    centerSquare = landCoordinates[0];
+  }
+
+  // Create a 5x5 grid of squares centered on the current/selected square
+  const gridSize = 5;
+  const halfGrid = Math.floor(gridSize / 2);
+  const gridSquares = [];
+
+  // Generate the grid squares
+  for (let x = -halfGrid; x <= halfGrid; x++) {
+    for (let z = -halfGrid; z <= halfGrid; z++) {
+      // Calculate position based on grid coordinates
+      const posX = x * MAP_CONFIG.squareSize;
+      const posZ = z * MAP_CONFIG.squareSize;
+
+      // Check if this grid position corresponds to one of our known coordinates
+      const existingSquare = landCoordinates.find((coord) => {
+        if (!centerSquare) return false;
+
+        // Calculate the grid position of this coordinate relative to center
+        const relX = Math.round(((coord.lng - centerSquare.lng) * 111000) / 3);
+        const relZ = -Math.round(((coord.lat - centerSquare.lat) * 111000) / 3);
+
+        return relX === x && relZ === z;
+      });
+
+      // If we found a match, use its data, otherwise create a placeholder square
+      const squareData = existingSquare || {
+        w3wAddress: "",
+        lat: centerSquare ? centerSquare.lat + z * 0.00003 : 0,
+        lng: centerSquare ? centerSquare.lng + x * 0.00003 : 0,
+        owner: "",
+        isOwned: false,
+      };
+
+      // Distance from center (for visual effects)
+      const distance = Math.sqrt(x * x + z * z) * 0.1;
+
+      // Is this the highlighted square?
+      const isHighlighted = squareData.w3wAddress === currentW3W;
+
+      gridSquares.push({
+        position: [posX, 0, posZ] as [number, number, number],
+        landCoordinate: squareData,
+        color: getColorFromWord(squareData.w3wAddress),
+        isHighlighted,
+        isOwned: squareData.isOwned,
+        distance,
+      });
+    }
+  }
+
   return (
     <>
       {/* Ambient light and directional light for better visibility */}
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
 
-      {/* Grid helper */}
-      <gridHelper args={[20, 20]} />
+      {/* Grid helper aligned with our square grid */}
+      <gridHelper
+        args={[MAP_CONFIG.squareSize * gridSize, gridSize]}
+        position={[0, -0.01, 0]}
+      />
 
-      {/* User's current position marker */}
-      <mesh position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[0.3, 0.3, 0.05, 32]} />
+      {/* Center marker */}
+      <mesh position={[0, 0.01, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.02, 32]} />
         <meshStandardMaterial color="#4285f4" />
       </mesh>
 
-      {/* Land squares from inventory and nearby */}
-      {landCoordinates.map((landCoord) => {
-        // Calculate the distance from user to this coordinate
-        const distanceKm = currentUserLocation
-          ? calculateDistance(
-              currentUserLocation.latitude,
-              currentUserLocation.longitude,
-              landCoord.lat,
-              landCoord.lng
-            )
-          : 999; // Default large distance if location unknown
-
-        // Calculate relative position:
-        // We need to transform lat/lng differences to X/Z coordinates
-        // Assuming flat projection for simplicity in a small area
-        const scale = 10; // Scale factor for coordinate differences
-
-        // Calculate relative position (lat/lng delta from current position)
-        const posX =
-          (landCoord.lng - currentUserLocation.longitude) * scale * 111;
-        const posZ =
-          -(landCoord.lat - currentUserLocation.latitude) * scale * 111;
-
-        // Height can be based on ownership or other factors
-        const posY = 0;
-
-        const position: [number, number, number] = [posX, posY, posZ];
-        const color = getColorFromWord(landCoord.w3wAddress);
-        const isHighlighted = landCoord.w3wAddress === currentW3W;
-
-        return (
-          <LandSquare
-            key={landCoord.w3wAddress}
-            landCoordinate={landCoord}
-            position={position}
-            color={color}
-            isHighlighted={isHighlighted}
-            isOwned={landCoord.isOwned}
-            distance={distanceKm}
-            onClick={() => onSquareClick(landCoord.w3wAddress)}
-          />
-        );
-      })}
+      {/* Render all grid squares */}
+      {gridSquares.map((square, idx) => (
+        <LandSquare
+          key={`grid-${idx}`}
+          landCoordinate={square.landCoordinate}
+          position={square.position}
+          color={square.color}
+          isHighlighted={square.isHighlighted}
+          isOwned={square.isOwned}
+          distance={square.distance}
+          onClick={() =>
+            square.landCoordinate.w3wAddress &&
+            onSquareClick(square.landCoordinate.w3wAddress)
+          }
+        />
+      ))}
 
       {/* OrbitControls allows the user to rotate and zoom */}
-      <OrbitControls target={[0, 0, 0]} />
+      <OrbitControls target={[0, 0, 0]} maxPolarAngle={Math.PI / 2 - 0.1} />
     </>
   );
 }
@@ -214,7 +253,6 @@ export default function LandVisualization({
 
   // Get user's current location and convert inventory to coordinates
   useEffect(() => {
-    console.log("asds");
     async function fetchUserLocationAndCoordinates() {
       setIsLoading(true);
 
@@ -226,21 +264,33 @@ export default function LandVisualization({
         // Convert W3W inventory to coordinates
         const coordinates: LandCoordinate[] = [];
 
+        // Add current location if it's known
+        if (currentW3W) {
+          const currentCoords = await convertW3WToCoordinates(currentW3W);
+          if (currentCoords) {
+            coordinates.push({
+              ...currentCoords,
+              owner: inventory.includes(currentW3W) ? account || "" : "",
+              isOwned: inventory.includes(currentW3W),
+            });
+          }
+        }
+
         // Convert inventory squares to coordinates
         for (const w3wAddress of inventory) {
-          const coords = await convertW3WToCoordinates(w3wAddress);
+          if (w3wAddress === currentW3W) continue; // Skip if already added
 
+          const coords = await convertW3WToCoordinates(w3wAddress);
           if (coords) {
             coordinates.push({
               ...coords,
-              owner: "account",
+              owner: account || "",
               isOwned: true,
             });
           }
         }
-        console.log("Coordinates:", coordinates);
-        // TODO Mark the inventory squares as owned
 
+        console.log("Coordinates:", coordinates);
         setLandCoordinates(coordinates);
       } catch (error) {
         console.error("Error fetching location or coordinates:", error);
@@ -250,7 +300,7 @@ export default function LandVisualization({
     }
 
     fetchUserLocationAndCoordinates();
-  }, [inventory, account]);
+  }, [inventory, account, currentW3W]);
 
   return (
     <div className="w-full h-[500px] rounded-lg overflow-hidden border border-gray-200 shadow-inner relative">
@@ -277,6 +327,10 @@ export default function LandVisualization({
               6
             )}, ${currentUserLocation.longitude.toFixed(6)}`
           : "Getting your location..."}
+      </div>
+
+      <div className="absolute top-2 right-2 bg-black/70 p-2 rounded text-xs text-white">
+        {currentW3W ? `Selected: /// ${currentW3W}` : "No square selected"}
       </div>
     </div>
   );
