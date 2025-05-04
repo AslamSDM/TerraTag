@@ -233,12 +233,12 @@ export const MAP_CONFIG = {
 // Network settings
 export const NETWORK = {
   REQUIRED: {
-    chainId: 80001, // Polygon Amoy testnet
+    chainId: 80002, // Polygon Amoy testnet
     chainIdHex: "0x13881", // Hex version of chainId
     name: "Polygon Amoy Testnet",
     currency: {
-      name: "MATIC",
-      symbol: "MATIC",
+      name: "POL",
+      symbol: "POL",
       decimals: 18,
     },
     // Add multiple fallback RPC URLs to handle rate limiting
@@ -251,29 +251,13 @@ export const NETWORK = {
   },
   // Add more networks if needed in the future
   SUPPORTED_NETWORKS: {
-    "0x13881": {
+    "0x13882": {
       name: "Polygon Amoy Testnet",
       shortName: "Amoy",
       color: "text-purple-400",
       bgColor: "bg-purple-900/30",
       borderColor: "border-purple-800/30",
       icon: "🟣",
-    },
-    "0x89": {
-      name: "Polygon Mainnet",
-      shortName: "Polygon",
-      color: "text-purple-400",
-      bgColor: "bg-purple-900/30",
-      borderColor: "border-purple-800/30",
-      icon: "🟣",
-    },
-    "0x1": {
-      name: "Ethereum Mainnet",
-      shortName: "Ethereum",
-      color: "text-blue-400",
-      bgColor: "bg-blue-900/30",
-      borderColor: "border-blue-800/30",
-      icon: "🔵",
     },
   },
 };
