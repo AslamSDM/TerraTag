@@ -6,8 +6,18 @@ import {
   contractAbi,
   checkContractCompatibility,
   NETWORK,
-} from "../config";
+} from "@/config";
 import { Button } from "./ui/button";
+
+// Define interface for ethereum window
+interface EthereumWindow extends Window {
+  ethereum?: {
+    request: (args: any) => Promise<any>;
+    on: (event: string, callback: any) => void;
+  };
+}
+
+declare let window: EthereumWindow;
 
 const ConnectWallet: React.FC<ConnectWalletProps> = ({
   account,
@@ -113,12 +123,61 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
       }
     }
   }, [checkNetwork]);
+  // Helper function to set up contract and account
+  const setupContractAndAccount = useCallback(
+    async (
+      currentAccount: string,
+      provider: ethers.providers.Web3Provider,
+      signer: ethers.Signer
+    ) => {
+      setAccount(currentAccount);
+      setProvider(provider);
+      setSigner(signer);
 
+      // Load contract
+      const landContract = new ethers.Contract(
+        contractAddress,
+        contractAbi,
+        signer
+      );
+
+      // Check if the contract exists and is compatible
+      try {
+        const code = await provider.getCode(contractAddress);
+        if (code === "0x") {
+          console.error("No contract found at address:", contractAddress);
+          alert(
+            `No contract found at the specified address (${contractAddress}). Please check your configuration.`
+          );
+          return;
+        }
+
+        // Check contract compatibility
+        const compatibility = await checkContractCompatibility(landContract);
+        if (!compatibility.compatible) {
+          console.warn("Contract missing required functions:", compatibility);
+          alert(
+            `Warning: The contract at ${contractAddress} might not be fully compatible. Some functions may not work correctly.`
+          );
+        } else {
+          console.log("Contract is fully compatible");
+        }
+
+        setContract(landContract);
+      } catch (contractError: any) {
+        console.error("Error verifying contract:", contractError);
+        alert(`Error verifying contract: ${contractError.message}`);
+        // Still set the contract, but with a warning
+        setContract(landContract);
+      }
+    },
+    [setAccount, setProvider, setSigner, setContract]
+  );
   // Initialize web3 connection with proper network checks
   const initializeWeb3 = useCallback(
     async (currentAccount: string) => {
       // Get provider
-      const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum!);
 
       // Check if we're on the correct network
       const networkStatus = await checkNetwork();
@@ -130,7 +189,7 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
 
         // Refresh provider after network switch
         const updatedProvider = new ethers.providers.Web3Provider(
-          window.ethereum
+          window.ethereum!
         );
         const updatedSigner = updatedProvider.getSigner();
 
@@ -143,56 +202,8 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
 
       return true;
     },
-    [checkNetwork, switchNetwork]
+    [checkNetwork, switchNetwork, setupContractAndAccount]
   );
-
-  // Helper function to set up contract and account
-  const setupContractAndAccount = async (
-    currentAccount: string,
-    provider: ethers.providers.Web3Provider,
-    signer: ethers.Signer
-  ) => {
-    setAccount(currentAccount);
-    setProvider(provider);
-    setSigner(signer);
-
-    // Load contract
-    const landContract = new ethers.Contract(
-      contractAddress,
-      contractAbi,
-      signer
-    );
-
-    // Check if the contract exists and is compatible
-    try {
-      const code = await provider.getCode(contractAddress);
-      if (code === "0x") {
-        console.error("No contract found at address:", contractAddress);
-        alert(
-          `No contract found at the specified address (${contractAddress}). Please check your configuration.`
-        );
-        return;
-      }
-
-      // Check contract compatibility
-      const compatibility = await checkContractCompatibility(landContract);
-      if (!compatibility.compatible) {
-        console.warn("Contract missing required functions:", compatibility);
-        alert(
-          `Warning: The contract at ${contractAddress} might not be fully compatible. Some functions may not work correctly.`
-        );
-      } else {
-        console.log("Contract is fully compatible");
-      }
-
-      setContract(landContract);
-    } catch (contractError: any) {
-      console.error("Error verifying contract:", contractError);
-      alert(`Error verifying contract: ${contractError.message}`);
-      // Still set the contract, but with a warning
-      setContract(landContract);
-    }
-  };
 
   const connectWalletHandler = useCallback(async () => {
     if (window.ethereum) {
@@ -239,14 +250,23 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
             setContract(null);
           }
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error connecting wallet:", error);
-        alert(`Error connecting wallet: ${error.message || error}`);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        alert(`Error connecting wallet: ${errorMessage}`);
       }
     } else {
       alert("Please install MetaMask!");
     }
-  }, [initializeWeb3, checkNetwork]);
+  }, [
+    initializeWeb3,
+    checkNetwork,
+    setAccount,
+    setProvider,
+    setSigner,
+    setContract,
+  ]);
 
   // Check network on component mount and whenever wallet/ethereum state changes
   useEffect(() => {

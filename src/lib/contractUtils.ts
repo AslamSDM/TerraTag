@@ -1,5 +1,12 @@
 import { ethers } from "ethers";
-import { contractAddress, contractAbi, NETWORK } from "../config";
+import { contractAddress, contractAbi, NETWORK } from "@/config";
+
+// TypeScript declaration for window.ethereum
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
 
 /**
  * Get a user's inventory of land squares by querying blockchain events
@@ -198,7 +205,7 @@ export async function getSquareOwner(
 
 // Connect to wallet
 export async function connectWallet() {
-  if (!window.ethereum) {
+  if (!window?.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
@@ -222,9 +229,9 @@ export async function connectWallet() {
           method: "wallet_switchEthereumChain",
           params: [{ chainId: NETWORK.REQUIRED.chainIdHex }],
         });
-      } catch (switchError: any) {
+      } catch (switchError: unknown) {
         // If the network is not available, try to add it
-        if (switchError.code === 4902) {
+        if ((switchError as { code?: number }).code === 4902) {
           await window.ethereum.request({
             method: "wallet_addEthereumChain",
             params: [

@@ -47,7 +47,7 @@ function App() {
           setInventory(ownedSquares);
           setStatus("Inventory refreshed.");
         })
-        .catch((error: any) => {
+        .catch((error: Error) => {
           console.error("Error refreshing inventory:", error);
           setStatus(`Error refreshing inventory: ${error.message}`);
         });

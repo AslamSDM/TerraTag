@@ -6,7 +6,7 @@ import {
   getUserInventoryFromEvents,
   getSquareOwnerFallback,
 } from "../lib/contractUtils";
-import { contractAddress } from "../config";
+import { contractAddress } from "@/config";
 
 const Inventory: React.FC<InventoryProps> = ({
   contract,
@@ -224,7 +224,7 @@ const Inventory: React.FC<InventoryProps> = ({
               <path d="M9 21V9"></path>
             </svg>
           </div>
-          <p className="text-white">You don't own any land parcels yet.</p>
+          <p className="text-white">You don&apos;t own any land parcels yet.</p>
           <p className="text-white text-sm mt-1">
             Use the Actions panel to claim your first square.
           </p>
@@ -247,7 +247,7 @@ const Inventory: React.FC<InventoryProps> = ({
                 <div className="flex items-center">
                   <div className="w-2 h-2 rounded-full bg-blue-500 mr-3"></div>
                   <div className="font-medium text-white group-hover:text-white transition-colors">
-                    /// {square}
+                    {/* Triple slash */} {square}
                   </div>
                 </div>
 
@@ -271,7 +271,7 @@ const Inventory: React.FC<InventoryProps> = ({
           {selectedSquare && (
             <div className="bg-slate-800/80 border border-slate-700/80 rounded-md p-3 text-sm">
               <h4 className="font-medium text-white mb-1">
-                /// {selectedSquare}
+                {/* /// */} {selectedSquare}
               </h4>
               <div className="flex items-center text-xs text-white">
                 <span>Owner: </span>
@@ -337,7 +337,7 @@ const Inventory: React.FC<InventoryProps> = ({
                   <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
                 <p>
-                  Using fallback inventory method. The contract's
+                  Using fallback inventory method. The contract&apos;s
                   getUserInventory function is not available. Inventory data is
                   reconstructed from blockchain events and may not be complete
                   or up-to-date.

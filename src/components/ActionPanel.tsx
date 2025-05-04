@@ -5,6 +5,14 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 
+// Define interfaces for the data types
+interface SwapRequest {
+  id: string;
+  requesterSquare: string;
+  counterpartySquare: string;
+  counterparty: string;
+}
+
 const ActionPanel: React.FC<ActionPanelProps> = ({
   contract,
   account,
@@ -17,7 +25,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
   const [swapMySquare, setSwapMySquare] = useState(""); // w3w string
   const [swapTheirSquare, setSwapTheirSquare] = useState(""); // w3w string
   const [swapOtherUser, setSwapOtherUser] = useState(""); // address
-  const [pendingSwaps, setPendingSwaps] = useState<any[]>([]);
+  const [pendingSwaps, setPendingSwaps] = useState<SwapRequest[]>([]);
   const [loadingSwaps, setLoadingSwaps] = useState(false);
   const [theirSquareOwner, setTheirSquareOwner] = useState<string | null>(null);
   const [checkingOwner, setCheckingOwner] = useState(false);
@@ -37,7 +45,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
 
       // This implementation is simplified - in a real app, you would probably use events or a more efficient method
       // to track pending swaps. We'll mock this for the demo.
-      const mockPendingSwaps: any[] = [];
+      const mockPendingSwaps: SwapRequest[] = [];
 
       setPendingSwaps(mockPendingSwaps);
       setStatus("Pending swaps updated");
@@ -53,7 +61,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     if (contract && account) {
       fetchPendingSwaps();
     }
-  }, [contract, account]);
+  }, [contract, account, fetchPendingSwaps]); // Added fetchPendingSwaps as dependency
 
   // Check owner of a square when entered in the swap form
   const checkSquareOwner = async (squareName: string) => {
@@ -95,7 +103,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
       setTheirSquareOwner(null);
       setTheirSquareUnclaimed(false);
     }
-  }, [swapTheirSquare]);
+  }, [swapTheirSquare, checkSquareOwner]); // Added checkSquareOwner as dependency
 
   const handleAction = async (actionType: string, swapId?: string) => {
     if (!contract || !account) {
@@ -454,7 +462,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
 
           {/* Other user address - auto-filled but editable */}
           <div className={theirSquareUnclaimed ? "opacity-50" : ""}>
-            <p className="text-xs text-white mb-1">Other User's Address</p>
+            <p className="text-xs text-white mb-1">Other User&apos;s Address</p>
             <Input
               type="text"
               placeholder="0x..."

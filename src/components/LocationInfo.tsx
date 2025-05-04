@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { LocationInfoProps } from "../types";
-import { W3W_API_KEY } from "../config";
 import { Button } from "./ui/button";
 
 const LocationInfo: React.FC<LocationInfoProps> = ({
@@ -33,23 +32,20 @@ const LocationInfo: React.FC<LocationInfoProps> = ({
         setStatus("Location found. Fetching what3words address...");
         console.log("Coords:", latitude, longitude);
 
-        // Fetch what3words address
+        // Fetch what3words address using our API route
         try {
           const response = await fetch(
-            `https://api.what3words.com/v3/convert-to-3wa?coordinates=${latitude},${longitude}&key=${W3W_API_KEY}`,
-            {
-              referrer: "https://developer.what3words.com/",
-            }
+            `/api/what3words?coordinates=${latitude},${longitude}`
           );
+
           if (!response.ok) {
             const errorData = await response.json();
             console.error("w3w API Error:", errorData);
             throw new Error(
-              `what3words API error: ${
-                errorData.error?.message || response.statusText
-              }`
+              `what3words API error: ${errorData.error || response.statusText}`
             );
           }
+
           const data = await response.json();
           if (data.words) {
             setCurrentW3W(data.words);
@@ -179,7 +175,7 @@ const LocationInfo: React.FC<LocationInfoProps> = ({
         <div className="bg-emerald-900/20 border border-emerald-600/30 rounded-lg p-3 text-center mb-4">
           <div className="text-sm text-white mb-1">Your current square</div>
           <div className="text-xl font-medium text-white tracking-wide">
-            /// {currentW3W}
+            {/* /// */} {currentW3W}
           </div>
         </div>
       )}

@@ -1,4 +1,3 @@
-import { W3W_API_KEY } from "../config";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -9,9 +8,9 @@ export function cn(...inputs: ClassValue[]) {
 // what3words API utils
 export async function convertW3WToCoordinates(w3wAddress: string) {
   try {
-    // Using our new Next.js API route instead of directly calling the what3words API
+    // Using our API route instead of directly calling the what3words API
     const response = await fetch(
-      `/api/w3w?words=${encodeURIComponent(w3wAddress)}`
+      `/api/what3words?words=${encodeURIComponent(w3wAddress)}`
     );
 
     if (!response.ok) {
@@ -20,8 +19,8 @@ export async function convertW3WToCoordinates(w3wAddress: string) {
 
     const data = await response.json();
     return {
-      lat: data.lat,
-      lng: data.lng,
+      lat: data.coordinates.lat,
+      lng: data.coordinates.lng,
       w3wAddress,
     };
   } catch (error) {

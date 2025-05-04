@@ -1,5 +1,7 @@
 // Environment configuration for TerraTag app
 
+import { ethers } from "ethers";
+
 // Contract configuration
 export const contractAddress = "0xd0baEfE4e7b9B2E7D427365aA29e19632281cC2c";
 
@@ -272,7 +274,7 @@ export const NETWORK = {
 };
 
 // Helper function to check if the contract has the required functions
-export async function checkContractCompatibility(contract: any) {
+export async function checkContractCompatibility(contract: ethers.Contract) {
   try {
     // Check if the contract supports the interface we need
     const functions: Record<string, boolean> = {
@@ -292,7 +294,7 @@ export async function checkContractCompatibility(contract: any) {
         console.log(
           `Contract ${funcName} support: ${isFunction ? "Yes" : "No"}`
         );
-      } catch (e) {
+      } catch (e: unknown) {
         console.warn(`Error checking ${funcName}:`, e);
       }
     }
@@ -301,7 +303,7 @@ export async function checkContractCompatibility(contract: any) {
       compatible: Object.values(functions).every(Boolean),
       functions,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error checking contract compatibility:", error);
     return {
       compatible: false,
