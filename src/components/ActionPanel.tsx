@@ -36,30 +36,60 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
   const isCurrentSquareOwned =
     currentW3W && inventory && inventory.includes(currentW3W);
 
-  // Function to fetch pending swaps (this is a simplified implementation)
+  // Function to fetch pending swaps with retry logic
   const fetchPendingSwaps = async () => {
     if (!contract || !account) return;
 
     setLoadingSwaps(true);
-    try {
-      // Get user inventory first to check what lands they own
-      await contract.getUserInventory(account);
+    let retryCount = 0;
+    const maxRetries = 3;
 
-      // For each owned square, we'll check recent events to find pending swap requests
-      // This is a simplified approach - for production, you'd likely use event filters or a more efficient method
+    while (retryCount < maxRetries) {
+      try {
+        // Get user inventory first to check what lands they own
+        await contract.getUserInventory(account);
 
-      // This implementation is simplified - in a real app, you would probably use events or a more efficient method
-      // to track pending swaps. We'll mock this for the demo.
-      const mockPendingSwaps: SwapRequest[] = [];
+        // For each owned square, we'll check recent events to find pending swap requests
+        // This is a simplified approach - for production, you'd likely use event filters or a more efficient method
 
-      setPendingSwaps(mockPendingSwaps);
-      setStatus("Pending swaps updated");
-    } catch (error: any) {
-      console.error("Error fetching pending swaps:", error);
-      setStatus(`Error fetching pending swaps: ${error.message}`);
-    } finally {
-      setLoadingSwaps(false);
+        // This implementation is simplified - in a real app, you would probably use events or a more efficient method
+        // to track pending swaps. We'll mock this for the demo.
+        const mockPendingSwaps: SwapRequest[] = [];
+
+        setPendingSwaps(mockPendingSwaps);
+        setStatus("Pending swaps updated");
+        return; // Success - exit the retry loop
+      } catch (error: any) {
+        retryCount++;
+        console.error(
+          `Error fetching pending swaps (attempt ${retryCount}/${maxRetries}):`,
+          error
+        );
+
+        if (error.message && error.message.includes("Rate Limit Exceeded")) {
+          // If we hit a rate limit, wait a bit longer before retrying
+          const delay = 1000 * retryCount; // Increase delay with each retry
+          await new Promise((resolve) => setTimeout(resolve, delay));
+
+          if (retryCount < maxRetries) {
+            setStatus(
+              `Rate limit hit, retrying (${retryCount}/${maxRetries})...`
+            );
+            continue;
+          }
+        }
+
+        // Final attempt failed or different error
+        setStatus(`Error fetching pending swaps: ${error.message}`);
+        break;
+      } finally {
+        if (retryCount >= maxRetries) {
+          setLoadingSwaps(false);
+        }
+      }
     }
+
+    setLoadingSwaps(false);
   };
 
   useEffect(() => {

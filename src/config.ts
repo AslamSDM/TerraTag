@@ -241,7 +241,12 @@ export const NETWORK = {
       symbol: "MATIC",
       decimals: 18,
     },
-    rpcUrls: ["https://rpc-amoy.polygon.technology/"],
+    // Add multiple fallback RPC URLs to handle rate limiting
+    rpcUrls: [
+      "https://rpc-amoy.polygon.technology/",
+      "https://polygon-amoy.blockpi.network/v1/rpc/public",
+      "https://polygon-amoy.public.blastapi.io",
+    ],
     blockExplorerUrls: ["https://amoy.polygonscan.com/"],
   },
   // Add more networks if needed in the future
