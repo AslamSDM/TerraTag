@@ -234,7 +234,7 @@ export const MAP_CONFIG = {
 export const NETWORK = {
   REQUIRED: {
     chainId: 80002, // Polygon Amoy testnet
-    chainIdHex: "0x13881", // Hex version of chainId
+    chainIdHex: "0x13882", // Hex version of chainId (corrected from 0x13881)
     name: "Polygon Amoy Testnet",
     currency: {
       name: "POL",

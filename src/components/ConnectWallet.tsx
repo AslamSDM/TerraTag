@@ -7,15 +7,12 @@ import {
   contractAbi,
   checkContractCompatibility,
   NETWORK,
-} from "@/config";
+} from "../config";
 import { Button } from "./ui/button";
 
 // Define interface for ethereum window
 interface EthereumWindow extends Window {
-  ethereum?: {
-    request: (args: any) => Promise<any>;
-    on: (event: string, callback: any) => void;
-  };
+  ethereum?: any;
 }
 
 declare let window: EthereumWindow;
@@ -33,6 +30,10 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
     isCorrect: boolean;
   } | null>(null);
   const [isNetworkSwitching, setIsNetworkSwitching] = useState(false);
+  // Timer reference for periodic checks
+  const [swapCheckTimer, setSwapCheckTimer] = useState<NodeJS.Timeout | null>(
+    null
+  );
 
   // Check current network and update UI
   const checkNetwork = useCallback(async () => {
@@ -124,61 +125,12 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
       }
     }
   }, [checkNetwork]);
-  // Helper function to set up contract and account
-  const setupContractAndAccount = useCallback(
-    async (
-      currentAccount: string,
-      provider: ethers.providers.Web3Provider,
-      signer: ethers.Signer
-    ) => {
-      setAccount(currentAccount);
-      setProvider(provider);
-      setSigner(signer);
 
-      // Load contract
-      const landContract = new ethers.Contract(
-        contractAddress,
-        contractAbi,
-        signer
-      );
-
-      // Check if the contract exists and is compatible
-      try {
-        const code = await provider.getCode(contractAddress);
-        if (code === "0x") {
-          console.error("No contract found at address:", contractAddress);
-          alert(
-            `No contract found at the specified address (${contractAddress}). Please check your configuration.`
-          );
-          return;
-        }
-
-        // Check contract compatibility
-        const compatibility = await checkContractCompatibility(landContract);
-        if (!compatibility.compatible) {
-          console.warn("Contract missing required functions:", compatibility);
-          alert(
-            `Warning: The contract at ${contractAddress} might not be fully compatible. Some functions may not work correctly.`
-          );
-        } else {
-          console.log("Contract is fully compatible");
-        }
-
-        setContract(landContract);
-      } catch (contractError: any) {
-        console.error("Error verifying contract:", contractError);
-        alert(`Error verifying contract: ${contractError.message}`);
-        // Still set the contract, but with a warning
-        setContract(landContract);
-      }
-    },
-    [setAccount, setProvider, setSigner, setContract]
-  );
   // Initialize web3 connection with proper network checks
   const initializeWeb3 = useCallback(
     async (currentAccount: string) => {
       // Get provider
-      const web3Provider = new ethers.providers.Web3Provider(window.ethereum!);
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
 
       // Check if we're on the correct network
       const networkStatus = await checkNetwork();
@@ -190,7 +142,7 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
 
         // Refresh provider after network switch
         const updatedProvider = new ethers.providers.Web3Provider(
-          window.ethereum!
+          window.ethereum
         );
         const updatedSigner = updatedProvider.getSigner();
 
@@ -203,8 +155,85 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
 
       return true;
     },
-    [checkNetwork, switchNetwork, setupContractAndAccount]
+    [checkNetwork, switchNetwork]
   );
+
+  // Helper function to set up contract and account
+  const setupContractAndAccount = async (
+    currentAccount: string,
+    provider: ethers.providers.Web3Provider,
+    signer: ethers.Signer
+  ) => {
+    setAccount(currentAccount);
+    setProvider(provider);
+    setSigner(signer);
+
+    // Load contract
+    const landContract = new ethers.Contract(
+      contractAddress,
+      contractAbi,
+      signer
+    );
+
+    // Check if the contract exists and is compatible
+    try {
+      const code = await provider.getCode(contractAddress);
+      if (code === "0x") {
+        console.error("No contract found at address:", contractAddress);
+        alert(
+          `No contract found at the specified address (${contractAddress}). Please check your configuration.`
+        );
+        return;
+      }
+
+      // Check contract compatibility
+      const compatibility = await checkContractCompatibility(landContract);
+      if (!compatibility.compatible) {
+        console.warn("Contract missing required functions:", compatibility);
+        alert(
+          `Warning: The contract at ${contractAddress} might not be fully compatible. Some functions may not work correctly.`
+        );
+      } else {
+        console.log("Contract is fully compatible");
+      }
+
+      setContract(landContract);
+
+      // Setup timer to check pending swaps every minute
+      setupPendingSwapsTimer(landContract, currentAccount);
+    } catch (contractError: any) {
+      console.error("Error verifying contract:", contractError);
+      alert(`Error verifying contract: ${contractError.message}`);
+      // Still set the contract, but with a warning
+      setContract(landContract);
+    }
+  };
+
+  // Set up a timer to check for pending swaps every minute
+  const setupPendingSwapsTimer = (
+    contract: ethers.Contract,
+    userAccount: string
+  ) => {
+    if (swapCheckTimer) {
+      clearInterval(swapCheckTimer);
+    }
+
+    // Dispatch a custom event so other components know to check for pending swaps
+    const checkPendingSwapsEvent = new CustomEvent("checkPendingSwaps", {
+      detail: { contract, account: userAccount },
+    });
+
+    // Initial check
+    window.dispatchEvent(checkPendingSwapsEvent);
+
+    // Set up interval to check every minute
+    const timer = setInterval(() => {
+      console.log("Checking for pending swaps (one-minute interval)");
+      window.dispatchEvent(checkPendingSwapsEvent);
+    }, 60000); // 60000 ms = 1 minute
+
+    setSwapCheckTimer(timer);
+  };
 
   const connectWalletHandler = useCallback(async () => {
     if (window.ethereum) {
@@ -231,6 +260,13 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
             setProvider(null);
             setSigner(null);
             setContract(null);
+
+            // Clear the timer when disconnecting
+            if (swapCheckTimer) {
+              clearInterval(swapCheckTimer);
+              setSwapCheckTimer(null);
+            }
+
             console.log("Wallet disconnected");
           }
         });
@@ -249,6 +285,12 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
             setProvider(null);
             setSigner(null);
             setContract(null);
+
+            // Clear the timer when disconnecting
+            if (swapCheckTimer) {
+              clearInterval(swapCheckTimer);
+              setSwapCheckTimer(null);
+            }
           }
         });
       } catch (error: unknown) {
@@ -260,14 +302,7 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
     } else {
       alert("Please install MetaMask!");
     }
-  }, [
-    initializeWeb3,
-    checkNetwork,
-    setAccount,
-    setProvider,
-    setSigner,
-    setContract,
-  ]);
+  }, [initializeWeb3, checkNetwork, swapCheckTimer]);
 
   // Check network on component mount and whenever wallet/ethereum state changes
   useEffect(() => {
@@ -280,6 +315,15 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({
       return () => window.removeEventListener("focus", handleFocus);
     }
   }, [account, checkNetwork]);
+
+  // Clean up timer when component unmounts
+  useEffect(() => {
+    return () => {
+      if (swapCheckTimer) {
+        clearInterval(swapCheckTimer);
+      }
+    };
+  }, [swapCheckTimer]);
 
   // Get network styling from our config
   const getNetworkStyle = (chainId: string) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
 import { ActionPanelProps } from "../types";
 import { Button } from "./ui/button";
@@ -37,7 +37,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     currentW3W && inventory && inventory.includes(currentW3W);
 
   // Function to fetch pending swaps with retry logic
-  const fetchPendingSwaps = async () => {
+  const fetchPendingSwaps = useCallback(async () => {
     if (!contract || !account) return;
 
     setLoadingSwaps(true);
@@ -90,45 +90,71 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     }
 
     setLoadingSwaps(false);
-  };
+  }, [contract, account, setStatus]);
 
+  // Listen for the custom checkPendingSwaps event
   useEffect(() => {
+    const handlePendingSwapsCheck = (event: CustomEvent) => {
+      console.log("Received checkPendingSwaps event");
+      if (contract && account) {
+        fetchPendingSwaps();
+      }
+    };
+
+    // Add event listener for the custom event
+    window.addEventListener(
+      "checkPendingSwaps",
+      handlePendingSwapsCheck as EventListener
+    );
+
+    // Initial check on component mount
     if (contract && account) {
       fetchPendingSwaps();
     }
-  }, [contract, account, fetchPendingSwaps]); // Added fetchPendingSwaps as dependency
+
+    // Cleanup
+    return () => {
+      window.removeEventListener(
+        "checkPendingSwaps",
+        handlePendingSwapsCheck as EventListener
+      );
+    };
+  }, [contract, account, fetchPendingSwaps]);
 
   // Check owner of a square when entered in the swap form
-  const checkSquareOwner = async (squareName: string) => {
-    if (!contract || !squareName.trim()) {
-      setTheirSquareOwner(null);
-      setTheirSquareUnclaimed(false);
-      return;
-    }
-
-    setCheckingOwner(true);
-    try {
-      const owner = await contract.squareOwner(squareName);
-      console.log(`Owner of ${squareName}:`, owner);
-
-      // Check if the square is owned by someone
-      const zeroAddress = ethers.constants.AddressZero;
-      if (owner === zeroAddress) {
-        setTheirSquareUnclaimed(true);
+  const checkSquareOwner = useCallback(
+    async (squareName: string) => {
+      if (!contract || !squareName.trim()) {
         setTheirSquareOwner(null);
-      } else {
         setTheirSquareUnclaimed(false);
-        setTheirSquareOwner(owner);
-        setSwapOtherUser(owner);
+        return;
       }
-    } catch (error) {
-      console.error("Error checking square owner:", error);
-      setTheirSquareOwner(null);
-      setTheirSquareUnclaimed(false);
-    } finally {
-      setCheckingOwner(false);
-    }
-  };
+
+      setCheckingOwner(true);
+      try {
+        const owner = await contract.squareOwner(squareName);
+        console.log(`Owner of ${squareName}:`, owner);
+
+        // Check if the square is owned by someone
+        const zeroAddress = ethers.constants.AddressZero;
+        if (owner === zeroAddress) {
+          setTheirSquareUnclaimed(true);
+          setTheirSquareOwner(null);
+        } else {
+          setTheirSquareUnclaimed(false);
+          setTheirSquareOwner(owner);
+          setSwapOtherUser(owner);
+        }
+      } catch (error) {
+        console.error("Error checking square owner:", error);
+        setTheirSquareOwner(null);
+        setTheirSquareUnclaimed(false);
+      } finally {
+        setCheckingOwner(false);
+      }
+    },
+    [contract]
+  );
 
   // Effect to check owner whenever the swap square changes
   useEffect(() => {
